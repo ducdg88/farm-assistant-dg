@@ -1,0 +1,340 @@
+<!DOCTYPE html>
+<html lang="vi">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+<meta name="apple-mobile-web-app-title" content="FarmDG">
+<link rel="manifest" href="./manifest.webmanifest">
+<link rel="apple-touch-icon" href="./icon-180.png">
+<title>Farm Assistant DG</title>
+<style>
+  :root { --bg:#0b1014; --card:#101b24; --line:#1e2f3d; --accent:#38bdf8; --yellow:#fbbf24; --red:#f87171; --green:#4ade80; --text:#e2e8f0; --dim:#7d8ea0; }
+  * { box-sizing:border-box; -webkit-tap-highlight-color:transparent; }
+  html,body { margin:0; padding:0; background:var(--bg); color:var(--text); font-family:-apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,sans-serif; }
+  body { padding-bottom: calc(76px + env(safe-area-inset-bottom)); }
+  header { position:sticky; top:0; z-index:5; background:var(--bg); border-bottom:1px solid var(--line); padding:14px 16px 10px; }
+  header h1 { margin:0; font-size:18px; color:var(--accent); }
+  header p { margin:2px 0 0; font-size:12px; color:var(--dim); }
+  main { padding:12px 16px; max-width:560px; margin:0 auto; }
+  .card { background:var(--card); border:1px solid var(--line); border-radius:14px; padding:14px; margin-bottom:12px; }
+  .card h2 { margin:0 0 10px; font-size:15px; color:var(--accent); }
+  .btn { display:inline-block; border:1px solid var(--line); background:#15222d; color:var(--text); border-radius:10px; padding:10px 14px; font-size:14px; cursor:pointer; }
+  .btn:active { transform:scale(.97); }
+  .btn.primary { background:var(--accent); border-color:var(--accent); color:#04121d; font-weight:600; }
+  .btn.warn { background:var(--yellow); border-color:var(--yellow); color:#231a02; font-weight:600; }
+  .btn.danger { background:var(--red); border-color:var(--red); color:#2a0505; font-weight:600; }
+  .btn.small { padding:6px 10px; font-size:12px; }
+  .row { display:flex; gap:8px; flex-wrap:wrap; align-items:center; }
+  input[type=number], input[type=text] { background:#0d151d; border:1px solid var(--line); color:var(--text); border-radius:10px; padding:9px 10px; font-size:14px; width:100%; }
+  label { font-size:12px; color:var(--dim); display:block; margin:8px 0 4px; }
+  canvas { width:100%; border-radius:10px; border:1px solid var(--line); background:#081014; touch-action:manipulation; }
+  .legend { display:flex; gap:14px; margin-top:8px; font-size:12px; color:var(--dim); }
+  .dot { display:inline-block; width:10px; height:10px; border-radius:50%; margin-right:4px; vertical-align:-1px; }
+  .step { display:flex; align-items:center; gap:10px; padding:9px 0; border-bottom:1px dashed var(--line); font-size:14px; }
+  .step:last-child { border-bottom:none; }
+  .step .num { width:22px; height:22px; border-radius:50%; background:#15222d; border:1px solid var(--line); display:flex; align-items:center; justify-content:center; font-size:12px; flex:none; }
+  .step.done .num { background:var(--green); border-color:var(--green); color:#03150a; }
+  .step.active .num { background:var(--accent); border-color:var(--accent); color:#04121d; }
+  .step .txt { flex:1; }
+  .step .tm { font-variant-numeric:tabular-nums; color:var(--accent); font-size:13px; }
+  .step.done .txt { color:var(--dim); text-decoration:line-through; }
+  .timer { display:flex; align-items:center; justify-content:space-between; padding:10px 0; border-bottom:1px dashed var(--line); }
+  .timer:last-child { border-bottom:none; }
+  .timer .name { font-size:14px; }
+  .timer .count { font-size:16px; font-variant-numeric:tabular-nums; color:var(--accent); }
+  .timer .count.zero { color:var(--yellow); font-weight:700; }
+  .journal-item { padding:7px 0; border-bottom:1px dashed var(--line); font-size:13px; }
+  .journal-item .t { color:var(--dim); font-size:11px; }
+  nav { position:fixed; left:0; right:0; bottom:0; display:flex; background:#0d141b; border-top:1px solid var(--line); padding-bottom:env(safe-area-inset-bottom); z-index:10; }
+  nav button { flex:1; background:none; border:none; color:var(--dim); font-size:11px; padding:9px 0 7px; display:flex; flex-direction:column; align-items:center; gap:3px; }
+  nav button.on { color:var(--accent); }
+  nav .ico { font-size:18px; line-height:1; }
+  .page { display:none; } .page.on { display:block; }
+  .badge { background:var(--red); color:#fff; border-radius:999px; padding:1px 7px; font-size:11px; margin-left:6px; }
+  .flash { animation:flash 1s infinite; } @keyframes flash { 50% { background:#3a1d1d; } }
+  .note { font-size:12px; color:var(--dim); line-height:1.5; }
+</style>
+</head>
+<body>
+<header>
+  <h1>Farm Assistant DG</h1>
+  <p id="sub">Trợ lý farm — nhắc anh tự chạy, máy không tự bấm (giới hạn Apple)</p>
+</header>
+
+<main>
+  <!-- ================= BẢN ĐỒ ================= -->
+  <section id="page-map" class="page on">
+    <div class="card">
+      <h2>Bản đồ farm (điểm đã khóa)</h2>
+      <canvas id="map" width="720" height="600"></canvas>
+      <div class="row" style="margin-top:10px">
+        <button class="btn primary small" id="modeFarm">Đặt điểm farm</button>
+        <button class="btn small" id="modeBase">Đặt căn cứ</button>
+        <button class="btn danger small" id="clearMap">Xóa hết</button>
+      </div>
+      <div class="legend">
+        <span><span class="dot" style="background:#fbbf24"></span>Điểm farm (chạm để thêm / chạm lại để xóa)</span>
+        <span><span class="dot" style="background:#38bdf8"></span>Căn cứ</span>
+      </div>
+      <p class="note">Chạm 1 lần vào đúng vị trí trong game mà anh muốn bot (sau này) tự đi tới. Dữ liệu lưu trong máy.</p>
+    </div>
+    <div class="card">
+      <h2>Lưu ý thật (iPhone)</h2>
+      <p class="note">Apple không cho app/web nhìn màn hình game khác và tự bấm. Bản đồ này là "trợ thủ nhớ việc": máy nhắc bước, anh bấm. Bản demo bot tự động (quét → nhặt → về căn cứ → nâng cấp) đã chạy được trên PC, khi nào game có bản Android/emulator thì nối được tự động hoàn toàn.</p>
+    </div>
+  </section>
+
+  <!-- ================= VÒNG FARM ================= -->
+  <section id="page-loop" class="page">
+    <div class="card">
+      <h2>Vòng farm hiện tại</h2>
+      <div class="row">
+        <button class="btn primary" id="startLoop">▶ Bắt đầu vòng farm</button>
+        <button class="btn" id="resetLoop">Bỏ vòng này</button>
+      </div>
+      <div id="steps" style="margin-top:10px"></div>
+    </div>
+    <div class="card">
+      <h2>Thống kê phiên</h2>
+      <div id="stats" style="font-size:14px; line-height:1.9"></div>
+    </div>
+  </section>
+
+  <!-- ================= HẸN GIỜ ================= -->
+  <section id="page-timer" class="page">
+    <div class="card">
+      <h2>Hẹn giờ respawn / nhắc việc</h2>
+      <div class="row">
+        <input type="text" id="timerName" placeholder="Tên (vd: Thịt bò khu A)" style="flex:1.4">
+        <input type="number" id="timerMin" placeholder="Phút" min="0" style="flex:.6">
+        <input type="number" id="timerSec" placeholder="Giây" min="0" max="59" style="flex:.6">
+        <button class="btn primary" id="addTimer">Thêm</button>
+      </div>
+      <div id="timers" style="margin-top:10px"></div>
+    </div>
+  </section>
+
+  <!-- ================= NHẬT KÝ ================= -->
+  <section id="page-log" class="page">
+    <div class="card">
+      <h2>Nhật ký vòng farm</h2>
+      <button class="btn danger small" id="clearLog" style="float:right; margin-top:-30px">Xóa nhật ký</button>
+      <div id="journal"></div>
+    </div>
+  </section>
+</main>
+
+<nav>
+  <button id="tab-map" class="on"><span class="ico">🗺️</span>Bản đồ</button>
+  <button id="tab-loop"><span class="ico">🔄</span>Vòng farm</button>
+  <button id="tab-timer"><span class="ico">⏱️</span>Hẹn giờ</button>
+  <button id="tab-log"><span class="ico">📒</span>Nhật ký</button>
+</nav>
+
+<script>
+"use strict";
+const $ = (s) => document.querySelector(s);
+const store = {
+  get(k, d) { try { return JSON.parse(localStorage.getItem(k)) ?? d; } catch { return d; } },
+  set(k, v) { localStorage.setItem(k, JSON.stringify(v)); }
+};
+const MAP_KEY = "farmdg_map", TIMER_KEY = "farmdg_timers", LOG_KEY = "farmdg_log", STAT_KEY = "farmdg_stats";
+
+/* ---------------- tabs ---------------- */
+const tabs = { map: "page-map", loop: "page-loop", timer: "page-timer", log: "page-log" };
+Object.entries(tabs).forEach(([t, id]) => {
+  $("#tab-" + t).onclick = () => {
+    Object.values(tabs).forEach(p => $("#" + p).classList.remove("on"));
+    $("#" + id).classList.add("on");
+    document.querySelectorAll("nav button").forEach(b => b.classList.remove("on"));
+    $("#tab-" + t).classList.add("on");
+    if (t === "map") drawMap();
+  };
+});
+
+/* ---------------- map ---------------- */
+const cv = $("#map"), ctx = cv.getContext("2d");
+let mapMode = "farm";
+const mapData = () => store.get(MAP_KEY, { farms: [], base: null });
+function drawMap() {
+  const d = mapData();
+  ctx.clearRect(0, 0, cv.width, cv.height);
+  ctx.fillStyle = "#081014"; ctx.fillRect(0, 0, cv.width, cv.height);
+  ctx.strokeStyle = "#14222e"; ctx.lineWidth = 1;
+  for (let x = 0; x < cv.width; x += 30) { ctx.beginPath(); ctx.moveTo(x, 0); ctx.lineTo(x, cv.height); ctx.stroke(); }
+  for (let y = 0; y < cv.height; y += 30) { ctx.beginPath(); ctx.moveTo(0, y); ctx.lineTo(cv.width, y); ctx.stroke(); }
+  d.farms.forEach(([x, y]) => {
+    ctx.fillStyle = "#fbbf24"; ctx.beginPath(); ctx.arc(x, y, 12, 0, Math.PI * 2); ctx.fill();
+    ctx.strokeStyle = "#fbbf24"; ctx.lineWidth = 3;
+    ctx.beginPath(); ctx.moveTo(x, y + 14); ctx.lineTo(x, y - 20); ctx.stroke();
+    ctx.fillStyle = "#fbbf24"; ctx.font = "bold 14px sans-serif";
+    ctx.fillText("FARM", x - 14, y - 26);
+  });
+  if (d.base) {
+    ctx.fillStyle = "#38bdf8";
+    ctx.fillRect(d.base[0] - 20, d.base[1] - 20, 40, 40);
+    ctx.fillStyle = "#04121d"; ctx.font = "bold 13px sans-serif"; ctx.textAlign = "center";
+    ctx.fillText("BASE", d.base[0], d.base[1] + 5); ctx.textAlign = "left";
+  }
+  $("#sub").textContent = mapMode === "farm"
+    ? "Chế độ: ĐẶT ĐIỂM FARM — chạm vào bản đồ để khóa điểm farm"
+    : "Chế độ: ĐẶT CĂN CỨ — chạm vào bản đồ để đặt nhà";
+}
+cv.addEventListener("click", (e) => {
+  const r = cv.getBoundingClientRect();
+  const x = Math.round((e.clientX - r.left) * (cv.width / r.width));
+  const y = Math.round((e.clientY - r.top) * (cv.height / r.height));
+  const d = mapData();
+  if (mapMode === "farm") {
+    const i = d.farms.findIndex(f => Math.hypot(f[0] - x, f[1] - y) < 18);
+    if (i >= 0) { d.farms.splice(i, 1); journal("Xóa điểm farm tại (" + x + "," + y + ")"); }
+    else { d.farms.push([x, y]); journal("Khóa điểm farm tại (" + x + "," + y + ")"); }
+  } else { d.base = [x, y]; journal("Đặt căn cứ tại (" + x + "," + y + ")"); }
+  store.set(MAP_KEY, d); drawMap();
+});
+$("#modeFarm").onclick = () => { mapMode = "farm"; drawMap(); };
+$("#modeBase").onclick = () => { mapMode = "base"; drawMap(); };
+$("#clearMap").onclick = () => { store.set(MAP_KEY, { farms: [], base: null }); journal("Xóa bản đồ"); drawMap(); };
+
+/* ---------------- farm loop ---------------- */
+const STEPS = [
+  { t: "Đi tới điểm farm (theo bản đồ)", def: 60 },
+  { t: "Quét tìm miếng thịt / tài nguyên", def: 30 },
+  { t: "Nhặt đồ xung quanh", def: 45 },
+  { t: "Kiểm tra túi — nếu ĐẦY: về căn cứ ngay", def: 15 },
+  { t: "Tại căn cứ: nâng cấp (level)", def: 20 },
+  { t: "Quay lại điểm farm, bắt đầu vòng mới", def: 45 }
+];
+let loopState = null;   // { step: number, remain: number, timer: id, done: [] }
+function renderSteps() {
+  const el = $("#steps");
+  if (!loopState) { el.innerHTML = '<p class="note">Chưa có vòng nào. Bấm "Bắt đầu vòng farm".</p>'; return; }
+  el.innerHTML = "";
+  STEPS.forEach((s, i) => {
+    const d = document.createElement("div");
+    d.className = "step" + (i < loopState.done.length ? " done" : i === loopState.step ? " active" : "");
+    d.innerHTML = `<span class="num">${i + 1}</span><span class="txt">${s.t}</span>` +
+      (i === loopState.step ? `<span class="tm">${loopState.remain}s</span>` : "");
+    if (i === loopState.step) d.onclick = () => finishStep();
+    el.appendChild(d);
+  });
+}
+function startLoop() {
+  loopState = { step: 0, remain: STEPS[0].def, done: [] };
+  journal("Bắt đầu vòng farm mới");
+  tickLoop(); renderSteps();
+}
+function finishStep() {
+  const s = loopState.step;
+  loopState.done.push(s);
+  journal("Xong bước: " + STEPS[s].t);
+  const stats = store.get(STAT_KEY, { loops: 0, items: 0, upgrades: 0 });
+  if (s === 2) stats.items += 3;
+  if (s === 4) { stats.upgrades += 1; stats.loops += 1; }
+  store.set(STAT_KEY, stats); renderStats();
+  if (s >= STEPS.length - 1) { stopLoop(); startLoop(); return; }
+  loopState.step += 1; loopState.remain = STEPS[loopState.step].def;
+  renderSteps();
+}
+function stopLoop() { if (loopState) { clearInterval(loopState.timer); loopState = null; } }
+function tickLoop() {
+  clearInterval(loopState.timer);
+  loopState.timer = setInterval(() => {
+    loopState.remain -= 1;
+    if (loopState.remain <= 0) { beep(); flash("#page-loop"); finishStep(); }
+    renderSteps();
+  }, 1000);
+}
+$("#startLoop").onclick = () => { stopLoop(); startLoop(); };
+$("#resetLoop").onclick = () => { stopLoop(); renderSteps(); };
+function renderStats() {
+  const s = store.get(STAT_KEY, { loops: 0, items: 0, upgrades: 0 });
+  $("#stats").innerHTML = `Vòng farm hoàn thành: <b>${s.loops}</b><br>Tài nguyên thu (ước): <b>${s.items}</b><br>Lần nâng cấp: <b>${s.upgrades}</b>`;
+}
+
+/* ---------------- timers ---------------- */
+function renderTimers() {
+  const el = $("#timers");
+  const ts = store.get(TIMER_KEY, []);
+  el.innerHTML = "";
+  if (!ts.length) { el.innerHTML = '<p class="note">Chưa có hẹn giờ nào.</p>'; return; }
+  ts.forEach((t, i) => {
+    const d = document.createElement("div");
+    const left = Math.max(0, t.end - Date.now());
+    const m = Math.floor(left / 60000), s = Math.floor(left % 60000 / 1000);
+    d.className = "timer" + (left <= 0 ? " flash" : "");
+    d.innerHTML = `<span class="name">${t.name}</span><span class="count ${left <= 0 ? "zero" : ""}">${left <= 0 ? "HẾT GIỜ!" : m + ":" + String(s).padStart(2, "0")}</span>` +
+      `<button class="btn small" data-i="${i}">Xóa</button>`;
+    d.querySelector("button").onclick = () => {
+      const a = store.get(TIMER_KEY, []); a.splice(i, 1); store.set(TIMER_KEY, a); renderTimers();
+    };
+    el.appendChild(d);
+  });
+  const expired = ts.filter(t => t.end <= Date.now()).length;
+  $("#tab-timer").innerHTML = expired ? `<span class="ico">⏱️</span>Hẹn giờ<span class="badge">${expired}</span>` : `<span class="ico">⏱️</span>Hẹn giờ`;
+}
+$("#addTimer").onclick = () => {
+  const name = $("#timerName").value.trim() || "Hẹn giờ";
+  const mins = parseInt($("#timerMin").value || "0", 10);
+  const secs = parseInt($("#timerSec").value || "0", 10);
+  if (mins + secs <= 0) return;
+  const ts = store.get(TIMER_KEY, []);
+  ts.push({ name, end: Date.now() + (mins * 60 + secs) * 1000 });
+  store.set(TIMER_KEY, ts);
+  journal("Thêm hẹn giờ: " + name + " (" + mins + "p" + secs + "s)");
+  $("#timerName").value = ""; $("#timerMin").value = ""; $("#timerSec").value = "";
+  renderTimers();
+};
+setInterval(() => {
+  const ts = store.get(TIMER_KEY, []);
+  const hit = ts.find(t => t.end <= Date.now() && !t.fired);
+  if (hit) { hit.fired = true; store.set(TIMER_KEY, ts); notify(hit.name); beep(); flash("#page-timer"); }
+  renderTimers();
+}, 1000);
+
+/* ---------------- journal / notify ---------------- */
+function journal(msg) {
+  const log = store.get(LOG_KEY, []);
+  log.unshift({ t: new Date().toLocaleTimeString("vi-VN"), m: msg });
+  store.set(LOG_KEY, log.slice(0, 200));
+  renderJournal();
+}
+function renderJournal() {
+  const log = store.get(LOG_KEY, []);
+  $("#journal").innerHTML = log.length
+    ? log.map(e => `<div class="journal-item"><div class="t">${e.t}</div>${e.m}</div>`).join("")
+    : '<p class="note">Chưa có nhật ký.</p>';
+}
+$("#clearLog").onclick = () => { store.set(LOG_KEY, []); renderJournal(); };
+function flash(sel) {
+  const el = $(sel); el.classList.add("flash");
+  setTimeout(() => el.classList.remove("flash"), 3000);
+}
+function beep() {
+  try {
+    const a = new AudioContext();
+    const o = a.createOscillator(), g = a.createGain();
+    o.frequency.value = 880; g.gain.value = 0.15;
+    o.connect(g); g.connect(a.destination); o.start(); o.stop(a.currentTime + 0.5);
+  } catch (e) {}
+}
+function notify(title) {
+  if ("Notification" in window && Notification.permission === "granted") {
+    try { new Notification("FarmDG — " + title, { body: "Hẹn giờ đã kết thúc!", icon: "icon-180.png" }); } catch (e) {}
+  } else if ("Notification" in window && Notification.permission === "default") {
+    Notification.requestPermission();
+  }
+}
+
+/* ---------------- boot ---------------- */
+if ("serviceWorker" in navigator) navigator.serviceWorker.register("./sw.js").catch(() => {});
+if ("Notification" in window && Notification.permission === "default") {
+  setTimeout(() => Notification.requestPermission(), 3000);
+}
+renderSteps(); renderTimers(); renderJournal(); renderStats(); drawMap();
+</script>
+</body>
+</html>

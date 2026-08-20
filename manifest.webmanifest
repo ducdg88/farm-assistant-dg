@@ -1,0 +1,14 @@
+{
+  "name": "Farm Assistant DG",
+  "short_name": "FarmDG",
+  "description": "Tro ly farm cho game mobile: ban do diem farm da khoa, vong farm, hen gio respawn, nhat ky",
+  "start_url": "./index.html",
+  "display": "standalone",
+  "orientation": "portrait",
+  "background_color": "#0b1014",
+  "theme_color": "#0b1014",
+  "icons": [
+    { "src": "icon-180.png", "sizes": "180x180", "type": "image/png" },
+    { "src": "icon-512.png", "sizes": "512x512", "type": "image/png" }
+  ]
+}
