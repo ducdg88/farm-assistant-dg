@@ -6,6 +6,8 @@ A small PWA that helps a mobile farming game player track farm points, farm loop
 
 **Mở PWA trên điện thoại → biết ngay điểm farm nào sắp hồi và vòng farm tiếp theo là gì.**
 
+**Open the PWA on your phone → instantly see which farm point is about to respawn and what the next farm loop is.**
+
 PWA nhỏ giúp người chơi game mobile theo dõi điểm farm, vòng farm và thời gian hồi (respawn).
 
 
